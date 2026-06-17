@@ -20,34 +20,37 @@ jobs:
       - name: Grant Gradle execute permission
         run: chmod +x gradlew
 
-      - name: Install Xcode Command Line Tools
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
-      - name: Build iOS with RoboVM
-        run: ./gradlew ios:build
-
-      - name: Manually package IPA from compiled output
+      - name: Set up Xcode
         run: |
-          # RoboVM puts the compiled .app inside ios/build/robovm after ios:build
-          BUILD_DIR="ios/build/robovm"
-          
-          echo "=== Full ios/build tree ==="
-          find ios/build -maxdepth 8 2>/dev/null || echo "nothing in ios/build"
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
 
+      - name: Build iOS native with RoboVM
+        run: ./gradlew ios:robovmArchive --info
+
+      - name: Find and package IPA
+        run: |
           echo "=== All .app directories ==="
           find . -name "*.app" -type d 2>/dev/null
 
-          # Find the .app however deep it is
-          APP=$(find . -name "*.app" -type d | head -1)
+          echo "=== All .ipa files ==="
+          find . -name "*.ipa" 2>/dev/null
 
-          if [ -n "$APP" ]; then
-            echo "Packaging $APP into IPA..."
+          echo "=== ios/build tree ==="
+          find ios/build -maxdepth 8 2>/dev/null
+
+          APP=$(find . -name "*.app" -type d | head -1)
+          IPA=$(find . -name "*.ipa" | head -1)
+
+          if [ -n "$IPA" ]; then
+            cp "$IPA" ShatteredPD.ipa
+          elif [ -n "$APP" ]; then
             mkdir -p Payload
             cp -r "$APP" Payload/
             zip -r ShatteredPD.ipa Payload/
-            echo "Done! IPA created."
           else
-            echo "No .app found - build may have failed silently"
+            echo "ERROR: Nothing found to package"
             exit 1
           fi
 
