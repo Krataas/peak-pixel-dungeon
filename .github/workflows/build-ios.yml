@@ -25,13 +25,23 @@ jobs:
         env:
           ROBOVM_LICENSE: ${{ secrets.ROBOVM_LICENSE }}
 
-      - name: Package IPA (unsigned)
+      - name: Find RoboVM output & Package IPA
         run: |
-          cd ios/build/robovm
-          # zip the .app into an IPA structure
-          mkdir -p Payload
-          cp -r *.app Payload/
-          zip -r ShatteredPD.ipa Payload/
+          echo "=== Searching for .app files ==="
+          find . -name "*.app" -type d 2>/dev/null
+          echo "=== Searching for ios build output ==="
+          find . -path "*/ios/build/*" -maxdepth 6 2>/dev/null
+          
+          # Package whatever .app we find
+          APP_PATH=$(find . -name "*.app" -type d | head -1)
+          if [ -n "$APP_PATH" ]; then
+            mkdir -p Payload
+            cp -r "$APP_PATH" Payload/
+            zip -r ShatteredPD.ipa Payload/
+          else
+            echo "No .app found, listing ios/build contents:"
+            ls -la ios/build/ || echo "ios/build does not exist"
+          fi
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
