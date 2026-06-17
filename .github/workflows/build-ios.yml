@@ -24,21 +24,84 @@ jobs:
         run: |
           sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
-          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Create self-signed signing identity
+        run: |
+          # Create a self-signed certificate to satisfy RoboVM's signing requirement
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings build.keychain
+
+          # Generate a self-signed iPhone Developer certificate
+          cat > cert.cfg << EOF
+          [ req ]
+          default_bits       = 2048
+          prompt             = no
+          default_md         = sha256
+          distinguished_name = dn
+          [ dn ]
+          CN=iPhone Developer: Fake User (XXXXXXXXXX)
+          EOF
+
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout fake.key -out fake.crt -config cert.cfg
+
+          openssl pkcs12 -export -out fake.p12 \
+            -inkey fake.key -in fake.crt -passout pass:""
+
+          security import fake.p12 -k build.keychain -P "" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "" build.keychain
+
+      - name: Create fake provisioning profile
+        run: |
+          # Create a minimal fake mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          
+          UUID="FAKEFAKE-FAKE-FAKE-FAKE-FAKEFAKEFAKE"
+          
+          cat > /tmp/fake.mobileprovision << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>AppIDName</key>
+            <string>ShatteredPD</string>
+            <key>ApplicationIdentifierPrefix</key>
+            <array><string>XXXXXXXXXX</string></array>
+            <key>TeamName</key>
+            <string>Fake Team</string>
+            <key>TeamIdentifier</key>
+            <array><string>XXXXXXXXXX</string></array>
+            <key>Entitlements</key>
+            <dict>
+              <key>application-identifier</key>
+              <string>XXXXXXXXXX.com.shatteredpixel.shatteredpixeldungeon.apple</string>
+            </dict>
+            <key>ExpirationDate</key>
+            <date>2099-01-01T00:00:00Z</date>
+            <key>UUID</key>
+            <string>FAKEFAKE-FAKE-FAKE-FAKE-FAKEFAKEFAKE</string>
+            <key>Version</key>
+            <integer>1</integer>
+          </dict>
+          </plist>
+          EOF
+          
+          cp /tmp/fake.mobileprovision \
+            ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
 
       - name: Build iOS native with RoboVM
         run: ./gradlew ios:robovmArchive --info
 
       - name: Find and package IPA
         run: |
-          echo "=== All .app directories ==="
+          echo "=== All .app ==="
           find . -name "*.app" -type d 2>/dev/null
-
-          echo "=== All .ipa files ==="
+          echo "=== All .ipa ==="
           find . -name "*.ipa" 2>/dev/null
-
-          echo "=== ios/build tree ==="
-          find ios/build -maxdepth 8 2>/dev/null
 
           APP=$(find . -name "*.app" -type d | head -1)
           IPA=$(find . -name "*.ipa" | head -1)
@@ -50,7 +113,7 @@ jobs:
             cp -r "$APP" Payload/
             zip -r ShatteredPD.ipa Payload/
           else
-            echo "ERROR: Nothing found to package"
+            echo "ERROR: Nothing to package"
             exit 1
           fi
 
