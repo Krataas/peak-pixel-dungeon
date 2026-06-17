@@ -1,7 +1,7 @@
 name: Build iOS IPA
 
 on:
-  workflow_dispatch: # manual trigger only
+  workflow_dispatch:
 
 jobs:
   build-ios:
@@ -20,32 +20,40 @@ jobs:
       - name: Grant Gradle execute permission
         run: chmod +x gradlew
 
-      - name: Build iOS (RoboVM)
-        run: ./gradlew ios:build
-        env:
-          ROBOVM_LICENSE: ${{ secrets.ROBOVM_LICENSE }}
+      - name: Install Xcode Command Line Tools
+        run: sudo xcode-select --switch /Applications/Xcode.app
 
-      - name: Find RoboVM output & Package IPA
+      - name: Build iOS with RoboVM
+        run: ./gradlew ios:build
+
+      - name: Manually package IPA from compiled output
         run: |
-          echo "=== Searching for .app files ==="
-          find . -name "*.app" -type d 2>/dev/null
-          echo "=== Searching for ios build output ==="
-          find . -path "*/ios/build/*" -maxdepth 6 2>/dev/null
+          # RoboVM puts the compiled .app inside ios/build/robovm after ios:build
+          BUILD_DIR="ios/build/robovm"
           
-          # Package whatever .app we find
-          APP_PATH=$(find . -name "*.app" -type d | head -1)
-          if [ -n "$APP_PATH" ]; then
+          echo "=== Full ios/build tree ==="
+          find ios/build -maxdepth 8 2>/dev/null || echo "nothing in ios/build"
+
+          echo "=== All .app directories ==="
+          find . -name "*.app" -type d 2>/dev/null
+
+          # Find the .app however deep it is
+          APP=$(find . -name "*.app" -type d | head -1)
+
+          if [ -n "$APP" ]; then
+            echo "Packaging $APP into IPA..."
             mkdir -p Payload
-            cp -r "$APP_PATH" Payload/
+            cp -r "$APP" Payload/
             zip -r ShatteredPD.ipa Payload/
+            echo "Done! IPA created."
           else
-            echo "No .app found, listing ios/build contents:"
-            ls -la ios/build/ || echo "ios/build does not exist"
+            echo "No .app found - build may have failed silently"
+            exit 1
           fi
 
-      - name: Upload IPA artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ShatteredPD-ios
-          path: ios/build/robovm/ShatteredPD.ipa
+          path: ShatteredPD.ipa
           retention-days: 7
