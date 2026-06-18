@@ -37,15 +37,14 @@ jobs:
             -keyout fake.key -out fake.crt \
             -subj "/CN=iPhone Developer: Fake User (XXXXXXXXXX)"
 
-          # Export to p12 with explicit password
+          # Export to p12 without -legacy flag
           openssl pkcs12 -export \
             -inkey fake.key \
             -in fake.crt \
             -out fake.p12 \
-            -passout pass:password \
-            -legacy
+            -passout pass:password
 
-          # Import into keychain with same password
+          # Import into keychain
           security import fake.p12 \
             -k build.keychain \
             -P "password" \
