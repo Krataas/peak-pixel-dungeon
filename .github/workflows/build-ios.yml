@@ -27,33 +27,38 @@ jobs:
 
       - name: Create self-signed signing identity
         run: |
-          # Create a self-signed certificate to satisfy RoboVM's signing requirement
-          security create-keychain -p "" build.keychain
+          security create-keychain -p "password" build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
+          security unlock-keychain -p "password" build.keychain
           security set-keychain-settings build.keychain
 
-          # Generate a self-signed iPhone Developer certificate
-          cat > cert.cfg << EOF
-          [ req ]
-          default_bits       = 2048
-          prompt             = no
-          default_md         = sha256
-          distinguished_name = dn
-          [ dn ]
-          CN=iPhone Developer: Fake User (XXXXXXXXXX)
-          EOF
-
+          # Generate self-signed cert
           openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout fake.key -out fake.crt -config cert.cfg
+            -keyout fake.key -out fake.crt \
+            -subj "/CN=iPhone Developer: Fake User (XXXXXXXXXX)"
 
-          openssl pkcs12 -export -out fake.p12 \
-            -inkey fake.key -in fake.crt -passout pass:""
+          # Export to p12 with explicit password
+          openssl pkcs12 -export \
+            -inkey fake.key \
+            -in fake.crt \
+            -out fake.p12 \
+            -passout pass:password \
+            -legacy
 
-          security import fake.p12 -k build.keychain -P "" \
-            -T /usr/bin/codesign -T /usr/bin/security
-          security set-key-partition-list -S apple-tool:,apple: \
-            -s -k "" build.keychain
+          # Import into keychain with same password
+          security import fake.p12 \
+            -k build.keychain \
+            -P "password" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security \
+            -A
+
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "password" build.keychain
+
+          # Verify it imported
+          security find-identity -v build.keychain
 
       - name: Create fake provisioning profile
         run: |
