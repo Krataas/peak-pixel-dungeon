@@ -27,14 +27,13 @@ jobs:
 
       - name: Patch robovm to skip signing
         run: |
-          echo "robovm.skipSigning=true" >> gradle.properties
-          echo "robovm.iosSkipSigning=true" >> gradle.properties
-
-          # Remove any hardcoded signing from robovm.xml
+          printf "\nrobovm.skipSigning=true\n" >> gradle.properties
+          printf "\nrobovm.iosSkipSigning=true\n" >> gradle.properties
           sed -i '' '/<provisioningProfile>/d' ios/robovm.xml
           sed -i '' '/<signingIdentity>/d' ios/robovm.xml
-
-          echo "=== robovm.xml after patch ==="
+          echo "=== gradle.properties ==="
+          cat gradle.properties
+          echo "=== robovm.xml ==="
           cat ios/robovm.xml
 
       - name: Build iOS native with RoboVM
