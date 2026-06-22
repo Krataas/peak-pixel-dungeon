@@ -47,12 +47,16 @@ import com.shatteredpixel.shatteredpixeldungeon.items.Amulet;
 import com.shatteredpixel.shatteredpixeldungeon.items.Generator;
 import com.shatteredpixel.shatteredpixeldungeon.items.Heap;
 import com.shatteredpixel.shatteredpixeldungeon.items.Item;
+import com.shatteredpixel.shatteredpixeldungeon.items.Teleporter;
 import com.shatteredpixel.shatteredpixeldungeon.items.artifacts.TalismanOfForesight;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.Potion;
 import com.shatteredpixel.shatteredpixeldungeon.items.rings.Ring;
 import com.shatteredpixel.shatteredpixeldungeon.items.scrolls.Scroll;
 import com.shatteredpixel.shatteredpixeldungeon.items.wands.WandOfRegrowth;
 import com.shatteredpixel.shatteredpixeldungeon.items.wands.WandOfWarding;
+import com.shatteredpixel.shatteredpixeldungeon.journal.Bestiary;
+import com.shatteredpixel.shatteredpixeldungeon.journal.Catalog;
+import com.shatteredpixel.shatteredpixeldungeon.journal.Document;
 import com.shatteredpixel.shatteredpixeldungeon.journal.Notes;
 import com.shatteredpixel.shatteredpixeldungeon.levels.CavesBossLevel;
 import com.shatteredpixel.shatteredpixeldungeon.levels.CavesLevel;
@@ -83,6 +87,7 @@ import com.watabou.noosa.Game;
 import com.watabou.utils.BArray;
 import com.watabou.utils.Bundlable;
 import com.watabou.utils.Bundle;
+import com.watabou.utils.DeviceCompat;
 import com.watabou.utils.FileUtils;
 import com.watabou.utils.PathFinder;
 import com.watabou.utils.Random;
@@ -242,14 +247,14 @@ public class Dungeon {
 		//offset seed slightly to avoid output patterns
 		Random.pushGenerator( seed+1 );
 
-			Scroll.initLabels();
-			Potion.initColors();
-			Ring.initGems();
+		Scroll.initLabels();
+		Potion.initColors();
+		Ring.initGems();
 
-			SpecialRoom.initForRun();
-			SecretRoom.initForRun();
+		SpecialRoom.initForRun();
+		SecretRoom.initForRun();
 
-			Generator.fullReset();
+		Generator.fullReset();
 
 		Random.resetGenerators();
 		
@@ -284,6 +289,39 @@ public class Dungeon {
 		Badges.reset();
 		
 		GamesInProgress.selectedClass.initHero( hero );
+
+		// Debug: Automatically give Teleporter and unlock everything in INDEV mode
+		if (DeviceCompat.isDebug()) {
+			new Teleporter().identify().collect();
+			
+			// Unlock all badges/achievements
+			for (Badges.Badge badge : Badges.Badge.values()) {
+				Badges.unlock(badge);
+			}
+			Badges.saveGlobal();
+			
+			// Mark all catalog items as seen
+			for (Catalog cat : Catalog.values()) {
+				for (Class<?> item : cat.items()) {
+					Catalog.setSeen(item);
+				}
+			}
+			
+			// Mark all bestiary entities as seen
+			for (Bestiary cat : Bestiary.values()) {
+				for (Class<?> entity : cat.entities()) {
+					Bestiary.setSeen(entity);
+				}
+			}
+			
+			// Unlock all document pages
+			for (Document doc : Document.values()) {
+				for (String page : doc.pageNames()) {
+					doc.findPage(page);
+					doc.readPage(page);
+				}
+			}
+		}
 	}
 
 	public static boolean isChallenged( int mask ) {

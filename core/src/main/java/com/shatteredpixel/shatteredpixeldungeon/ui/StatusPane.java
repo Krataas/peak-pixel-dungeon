@@ -57,6 +57,7 @@ public class StatusPane extends Component {
 
 	private int lastTier = 0;
 
+	private HealthBar healthBar;
 	private Image shieldHP;
 	private Image hp;
 	private BitmapText hpText;
@@ -133,6 +134,9 @@ public class StatusPane extends Component {
 		compass = new Compass( Statistics.amuletObtained ? Dungeon.level.entrance() : Dungeon.level.exit() );
 		add( compass );
 
+		healthBar = new HealthBar();
+		add(healthBar);
+
 		if (large)  shieldHP = new Image(asset, 0, 112, 128, 9);
 		else        shieldHP = new Image(asset, 0, 44, 50, 4);
 		add(shieldHP);
@@ -204,6 +208,8 @@ public class StatusPane extends Component {
 			exp.x = x + 30;
 			exp.y = y + 30;
 
+			healthBar.setRect(x + 30, y + 19, 128, 9);
+
 			hp.x = shieldHP.x = x + 30;
 			hp.y = shieldHP.y = y + 19;
 
@@ -246,6 +252,9 @@ public class StatusPane extends Component {
 				}
 				hp.frame(50-hpWidth, 40, 50, 4);
 				shieldHP.frame(50-hpWidth, 44, 50, 4);
+				healthBar.setRect(hpleft, y + 2, hpWidth, 4);
+			} else {
+				healthBar.setRect(hpleft, y + 2, 50, 4);
 			}
 
 			hp.x = shieldHP.x = hpleft;
@@ -315,6 +324,13 @@ public class StatusPane extends Component {
 			healthPercent /= excess;
 			shieldPercent /= excess;
 		}
+
+		// Update HealthBar with damage overlays
+		healthBar.level(Dungeon.hero);
+
+		// Hide old sprite-based bars, use HealthBar component instead
+		hp.visible = false;
+		shieldHP.visible = false;
 
 		hp.scale.x = healthPercent;
 		shieldHP.scale.x = healthPercent + shieldPercent;

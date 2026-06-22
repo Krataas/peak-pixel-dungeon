@@ -83,6 +83,10 @@ public class Bleeding extends Buff {
 		level += amount;
 	}
 	
+	public int damage() {
+		return Math.round(Random.NormalFloat(level / 2f, level));
+	}
+	
 	@Override
 	public int icon() {
 		return BuffIndicator.BLEEDING;

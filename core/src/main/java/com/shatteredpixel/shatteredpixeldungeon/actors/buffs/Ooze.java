@@ -85,6 +85,16 @@ public class Ooze extends Buff {
 	public void extend( float duration ) {
 		left += duration;
 	}
+	
+	public int damage() {
+		if (Dungeon.scalingDepth() > 5) {
+			return 1 + Dungeon.scalingDepth() / 5;
+		} else if (Dungeon.scalingDepth() == 5) {
+			return 1;
+		} else {
+			return 1; // Average 0.5, but show 1 for indicator
+		}
+	}
 
 	@Override
 	public boolean act() {

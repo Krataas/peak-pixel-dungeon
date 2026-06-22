@@ -78,6 +78,11 @@ public class Corrosion extends Buff implements Hero.Doom {
 		left += duration;
 	}
 	
+	public float damage() {
+		// Return total remaining damage (damage per turn * turns remaining)
+		return damage * left;
+	}
+	
 	@Override
 	public int icon() {
 		return BuffIndicator.POISON;

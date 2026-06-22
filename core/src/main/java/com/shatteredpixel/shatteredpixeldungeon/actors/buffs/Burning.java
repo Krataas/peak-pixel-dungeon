@@ -65,6 +65,10 @@ public class Burning extends Buff implements Hero.Doom {
 		announced = true;
 	}
 	
+	public float damage() {
+		return left;
+	}
+	
 	@Override
 	public void storeInBundle( Bundle bundle ) {
 		super.storeInBundle( bundle );

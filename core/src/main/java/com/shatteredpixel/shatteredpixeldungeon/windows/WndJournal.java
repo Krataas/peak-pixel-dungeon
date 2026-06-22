@@ -72,6 +72,7 @@ import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollPane;
 import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollingGridPane;
 import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollingListPane;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Window;
+import com.shatteredpixel.shatteredpixeldungeon.utils.GLog;
 import com.watabou.input.KeyBindings;
 import com.watabou.input.KeyEvent;
 import com.watabou.noosa.BitmapText;
@@ -79,6 +80,7 @@ import com.watabou.noosa.ColorBlock;
 import com.watabou.noosa.Image;
 import com.watabou.noosa.Visual;
 import com.watabou.noosa.ui.Component;
+import com.watabou.utils.DeviceCompat;
 import com.watabou.utils.RectF;
 import com.watabou.utils.Reflection;
 
@@ -851,6 +853,23 @@ public class WndJournal extends WndTabbed {
 				@Override
 				public boolean onClick(float x, float y) {
 					if (inside(x, y)) {
+						// Debug mode: spawn item directly into inventory
+						if (DeviceCompat.isDebug() && ShatteredPixelDungeon.scene() instanceof GameScene && Dungeon.hero != null) {
+							try {
+								Item item = (Item) Reflection.newInstance(itemClass);
+								if (item != null) {
+									item.identify();
+									if (!item.doPickUp(Dungeon.hero)) {
+										Dungeon.level.drop(item, Dungeon.hero.pos).sprite.drop();
+									}
+									GLog.i("Debug: Spawned " + item.name());
+								}
+							} catch (Exception e) {
+								GLog.w("Debug: Could not spawn item");
+							}
+						}
+						
+						// Show info window (always, even in debug mode)
 						Image sprite = new ItemSprite();
 						sprite.copy(icon);
 						if (ShatteredPixelDungeon.scene() instanceof GameScene){

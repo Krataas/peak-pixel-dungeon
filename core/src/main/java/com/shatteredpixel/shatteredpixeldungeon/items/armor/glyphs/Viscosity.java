@@ -108,6 +108,10 @@ public class Viscosity extends Glyph {
 		
 		protected int damage = 0;
 		
+		public int damage() {
+			return damage;
+		}
+		
 		private static final String DAMAGE	= "damage";
 		
 		@Override

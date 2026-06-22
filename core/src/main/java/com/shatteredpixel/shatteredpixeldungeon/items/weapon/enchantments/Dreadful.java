@@ -23,46 +23,49 @@ package com.shatteredpixel.shatteredpixeldungeon.items.weapon.enchantments;
 
 import com.shatteredpixel.shatteredpixeldungeon.actors.Char;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Buff;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Reaper;
-import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Hero;
+import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Terror;
+import com.shatteredpixel.shatteredpixeldungeon.effects.Splash;
 import com.shatteredpixel.shatteredpixeldungeon.items.weapon.Weapon;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.ItemSprite;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.ItemSprite.Glowing;
 import com.watabou.utils.Random;
 
-public class Grim extends Weapon.Enchantment {
-	
-	private static ItemSprite.Glowing BLACK = new ItemSprite.Glowing( 0x000000 );
+public class Dreadful extends Weapon.Enchantment {
+
+	private static ItemSprite.Glowing DARK_PURPLE = new ItemSprite.Glowing( 0x6A0DAD );
 	
 	@Override
 	public int proc( Weapon weapon, Char attacker, Char defender, int damage ) {
-
-		if (defender.isImmune(Grim.class)) {
-			return damage;
-		}
-
 		int level = Math.max( 0, weapon.buffedLvl() );
 
-		// Calculate base proc chance: scales from 0 - 50% based on enemy HP, plus 0-5% per level
-		float maxChance = 0.5f + .05f*level;
-		maxChance *= procChanceMultiplier(attacker);
+		// lvl 0 - 20%
+		// lvl 1 - 33%
+		// lvl 2 - 43%
+		float procChance = (level+1f)/(level+5f) * procChanceMultiplier(attacker);
 		
-		// Actual chance scales with how damaged the enemy is (lower HP = higher chance)
-		float hpPercent = defender.HP / (float)defender.HT;
-		float chance = maxChance * (1f - hpPercent);
-		
-		if (Random.Float() < chance) {
-			// Apply Reaper stacks based on weapon level
-			// Base: 1 stack, +1 per 3 levels (max ~4 stacks at +9 weapon)
-			int stacks = 1 + level / 3;
+		if (Random.Float() < procChance && !defender.isImmune(Terror.class)) {
+
+			float powerMulti = Math.max(1f, procChance);
+
+			// Base duration of 10 turns, scales with proc chance
+			float duration = 10f * powerMulti;
 			
-			Reaper reaper = Buff.affect(defender, Reaper.class);
-			reaper.extend(stacks);
+			// Cap at Terror.DURATION (20f)
+			duration = Math.min(duration, Terror.DURATION);
 			
-			// Badge tracking for grim kills
-			if (attacker instanceof Hero && weapon.hasEnchant(Grim.class, attacker)){
-				// Track that this hero has procced grim for potential badge validation
+			Terror existing = defender.buff(Terror.class);
+			if (existing != null){
+				// If already terrified, add to existing duration up to cap
+				duration = Math.min(duration, Terror.DURATION - existing.cooldown());
 			}
+
+			if (duration > 0) {
+				Terror terror = Buff.affect(defender, Terror.class, duration);
+				terror.object = attacker.id();
+			}
+			
+			// Dark purple splash effect
+			Splash.at( defender.sprite.center(), 0x9D4EDD, 5);
 		}
 
 		return damage;
@@ -70,7 +73,7 @@ public class Grim extends Weapon.Enchantment {
 	
 	@Override
 	public Glowing glowing() {
-		return BLACK;
+		return DARK_PURPLE;
 	}
 
 }
